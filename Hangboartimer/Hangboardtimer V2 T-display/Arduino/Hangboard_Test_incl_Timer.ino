@@ -23,7 +23,7 @@
 #include <SPI.h>   // this is needed for display
 #include <Wire.h>  // this is needed for FT6206
 #include "pictures.h"
-
+#include "AiEsp32RotaryEncoder.h"
 #define LOAD_FONT8
 
 //Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
@@ -50,15 +50,60 @@ unsigned long guestT, darioT, anitaT;
 unsigned long guestTd, darioTd, anitaTd;
 unsigned long usertime;
 // Rotary Encoder Inputs
-#define CLK 1
-#define DT 2
+int counter =3;
+#define ROTARY_ENCODER_A_PIN 16
+#define ROTARY_ENCODER_B_PIN 3
+#define ROTARY_ENCODER_BUTTON_PIN 21
+#define ROTARY_ENCODER_VCC_PIN -1 /* 27 put -1 of Rotary encoder Vcc is connected directly to 3,3V; else you can use declared output pin for powering rotary encoder */
 
-int counter = 0;
-int currentStateCLK;
-int lastStateCLK;
-String currentDir = "";
+//depending on your encoder - try 1,2 or 4 to get expected behaviour
+//#define ROTARY_ENCODER_STEPS 1
+//#define ROTARY_ENCODER_STEPS 2
+#define ROTARY_ENCODER_STEPS 4
 
-int user = 0;
+//instead of changing here, rather change numbers above
+AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
+
+
+ int user = 0;
+
+void rotary_onButtonClick()
+{
+	static unsigned long lastTimePressed = 0;
+	//ignore multiple press in that time milliseconds
+	if (millis() - lastTimePressed < 500)
+	{
+		return;
+	}
+	lastTimePressed = millis();
+//	Serial.print("button pressed ");
+//	Serial.print(millis());
+//	Serial.println(" milliseconds after restart");
+}
+void rotary_loop()
+{
+	//dont print anything unless value changed
+	if (rotaryEncoder.encoderChanged())
+	{
+	//	Serial.print("Value: ");
+	//	Serial.println(rotaryEncoder.readEncoder());
+  user= rotaryEncoder.readEncoder();
+  finished=0;
+  tft.setTextSize(4);
+
+  tft.setCursor(0, TFTHEIGHT - 30);
+    tft.print("         ");
+
+	}
+	if (rotaryEncoder.isEncoderButtonClicked())
+	{
+		rotary_onButtonClick();
+	}
+}
+void IRAM_ATTR readEncoderISR()
+{
+	rotaryEncoder.readEncoder_ISR();
+}
 
 
 void setup(void) {
@@ -76,22 +121,32 @@ void setup(void) {
 
 
 
-  // Read the initial state of CLK
-  lastStateCLK = digitalRead(3);
+//we must initialize rotary encoder
+	rotaryEncoder.begin();
+	rotaryEncoder.setup(readEncoderISR);
+	//set boundaries and if values should cycle or not
+	//in this example we will set possible values between 0 and 1000;
+	bool circleValues = false;
+	rotaryEncoder.setBoundaries(0, counter, true); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
 
-  // Call updateEncoder() when any high/low changed seen
-  // on interrupt 0 (pin 2), or interrupt 1 (pin 3)
-  attachInterrupt(3, updateEncoder, CHANGE);
-  attachInterrupt(16, updateEncoder, CHANGE);
+	/*Rotary acceleration introduced 25.2.2021.
+   * in case range to select is huge, for example - select a value between 0 and 1000 and we want 785
+   * without accelerateion you need long time to get to that number
+   * Using acceleration, faster you turn, faster will the value raise.
+   * For fine tuning slow down.
+   */
+	//rotaryEncoder.disableAcceleration(); //acceleration is now enabled by default - disable if you dont need it
+	rotaryEncoder.setAcceleration(0); //or set the value - larger number = more accelearation; 0 or 1 means disabled acceleration
+
+
+
+
+
   tft.begin();
 
   tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
-
-
-
   tft.drawBitmap(TFTWITH - 70, 0, boulderimages, 70, 54, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_Palm, 36, 48, TFT_WHITE);
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_Palml, 36, 48, TFT_WHITE);
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_Mittel, 36, 48, TFT_WHITE);
@@ -101,7 +156,7 @@ void setup(void) {
 }
 
 void loop() {
-  updateEncoder();
+ rotary_loop();
 
 
   if (digitalRead(21) == LOW) {
@@ -220,56 +275,12 @@ void drawPicture() {
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_kleinl, 36, 48, TFT_WHITE);
 }
 
-void updateEncoder() {
-  // Read the current state of CLK
-  currentStateCLK = digitalRead(16);
-
-  // If last and current state of CLK are different, then pulse occurred
-  // React to only 1 state change to avoid double count
-  if (currentStateCLK != lastStateCLK && currentStateCLK == 1) {
-
-    // If the DT state is different than the CLK state then
-    // the encoder is rotating CCW so decrement
-    if (digitalRead(3) != currentStateCLK) {
 
 
-      counter--;
-      finished = 0;
-      start = 0;
-       
-      delay(500);
-      tft.setTextSize(4);
-      tft.setCursor(0, TFTHEIGHT - 30);
-       tft.print("         ");
-      if (counter <= -1) {
-        counter = 3;
-        delay(500);
-      }
-      currentDir = "CCW";
-    } else {
-      // Encoder is rotating CW so increment
-      counter++;
-      finished = 0;
-      start = 0;
-      delay(500);
-      tft.setTextSize(4);
-      tft.setCursor(0, TFTHEIGHT - 30);
-       tft.print("         ");
-      if (counter >= 3) {
-        counter = 0;
-        delay(500);
-      }
-      currentDir = "CW";
-    }
-  }
-
-  // Remember last CLK state
-  lastStateCLK = currentStateCLK;
-}
 
 
 void userSelect() {
-  user = counter;
+ // user = counter;
   switch (user) {
     case 0:
       tft.setCursor(60, 105);
