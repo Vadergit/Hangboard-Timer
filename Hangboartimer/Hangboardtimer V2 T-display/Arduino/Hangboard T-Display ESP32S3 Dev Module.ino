@@ -27,6 +27,29 @@
  */
 
 
+/*
+AI snipplets
+
+unsigned long times[3] = {guestT, darioT, anitaT};
+unsigned long timeD[3] = {guestTd, darioTd, anitaTd};
+char* names[3] = {"Guest", "Dario", "Anita"};
+
+for (int i = 0; i < 3; i++) {
+  if (times[i] > usertime) {
+    usertime = times[i];
+    user = i;
+  }
+  if (timeD[i] > usertime) {
+    usertime = timeD[i];
+    user = i;
+  }
+}
+
+Serial.println("Best time: " + String(names[user]) + " Time: " + String(usertime));
+
+
+
+*/
 
 
 #include <TFT_eSPI.h>
