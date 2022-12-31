@@ -5,18 +5,21 @@
 #include <TFT_eSPI.h>
 #include <EEPROM.h>
 #include <HX711_ADC.h>
-
+//#include <User_Setups/Setup24_ST7789.h>
 
 
 //pins:
-const int HX711_doutL = 21;  //mcu > HX711 dout pin
-const int HX711_sckL = 22;   //mcu > HX711 sck pin
+const int HX711_doutL = 2;  //mcu > HX711 dout pin
+const int HX711_sckL = 3;   //mcu > HX711 sck pin
 
 //pins:
-const int HX711_doutR = 15;  //mcu > HX711 dout pin
-const int HX711_sckR = 13;   //mcu > HX711 sck pin
+const int HX711_doutR = 10;  //mcu > HX711 dout pin
+const int HX711_sckR = 11;   //mcu > HX711 sck pin
 // HX711 circuit wiring
 
+int brightness = 255;       // 0-255 8bit
+
+TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
 int difRL = 50;
 int minpos = 20;
@@ -30,11 +33,11 @@ HX711_ADC LoadCellL(HX711_doutL, HX711_sckL);
 HX711_ADC LoadCellR(HX711_doutR, HX711_sckR);
 unsigned long t = 0;
 
-#define BUTTON_RIGHT 35
+#define BUTTON_RIGHT 14
 
 // TTGO: 240x135
-#define TFTW 240          // screen width
-#define TFTH 135          // screen height
+#define TFTW 320          // screen width
+#define TFTH 170          // screen height
 #define TFTW2 (TFTW / 2)  // half screen width
 #define TFTH2 (TFTH / 2)  // half screen height
 
@@ -60,7 +63,7 @@ unsigned long t = 0;
 
 #define COLOR565(r, g, b) ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
 
-auto tft = TFT_eSPI();  // Invoke custom library
+//auto tft = TFT_eSPI();  // Invoke custom library
 uint maxScore = 0;
 
 // background
@@ -130,10 +133,15 @@ void setup() {
   // Turn off WiFi and Bluetooth to save power
   WiFi.mode(WIFI_OFF);
   //  btStop();
-  Serial.begin(115200);
+  //Serial.begin(115200);
   pinMode(BUTTON_RIGHT, INPUT);
+  pinMode(15, OUTPUT);  //battery enable
+  digitalWrite(15, 1);  //battery enable
+  ledcSetup(0, 10000, 8);
+  ledcAttachPin(38, 0);
+  ledcWrite(0, brightness);
 
-
+/*
 
   LoadCellL.begin();
   LoadCellR.begin();
@@ -156,7 +164,7 @@ void setup() {
   LoadCellR.setCalFactor(22800);  // user set calibration value (float)
   Serial.println("Startup is complete");
 
-
+*/
 
   tft.init();
   tft.setRotation(1);
@@ -188,13 +196,24 @@ void game_start() {
   tft.fillRect(10, TFTH2 - 20, TFTW - 20, 1, TFT_WHITE);
   tft.fillRect(10, TFTH2 + 32, TFTW - 20, 1, TFT_WHITE);
   tft.setTextColor(TFT_WHITE);
+
+tft.setTextSize(3);
+  // half width - num char * char width in pixels
+  tft.setCursor(TFTW2 - (13 * 9), TFTH2 - 68);
+  tft.println("HANGBOARDGAME");
+
+
   tft.setTextSize(3);
   // half width - num char * char width in pixels
-  tft.setCursor(TFTW2 - (6 * 9), TFTH2 - 16);
-  tft.println("FLAPPY");
+  tft.setCursor(TFTW2 - (8 * 9), TFTH2 - 16);
+  tft.println("BACKPACK");
   tft.setTextSize(3);
-  tft.setCursor(TFTW2 - (6 * 9), TFTH2 + 8);
-  tft.println("-BIRD-");
+  tft.setCursor(TFTW2 - (11 * 9), TFTH2 + 8);
+  tft.println("-MEOW-MEOW-");
+
+   tft.setTextSize(2);
+  tft.setCursor(TFTW2 - (18 * 6), TFTH2 + 58);
+  tft.println("WEIGHTSHIFT or DIE");
 
   // wait for push button
   while (digitalRead(BUTTON_RIGHT) == HIGH)
@@ -457,11 +476,11 @@ void updateLoadcell() {
       difRL = (map(forceR, 0, load, minpos, maxpos));
       bird.y = difRL;
 
-      Serial.print(" Diff val: ");
-      Serial.println(difRL);
+      //Serial.print(" Diff val: ");
+      //Serial.println(difRL);
     }
   }
-
+/*
   // receive command from serial terminal, send 't' to initiate tare operation:
   if (Serial.available() > 0) {
     char inByte = Serial.read();
@@ -478,4 +497,5 @@ void updateLoadcell() {
   if (LoadCellR.getTareStatus() == true) {
     Serial.println("Tare load cell 2 complete");
   }
+  */
 }
