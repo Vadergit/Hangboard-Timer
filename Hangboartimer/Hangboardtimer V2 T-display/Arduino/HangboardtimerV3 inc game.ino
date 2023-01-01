@@ -45,7 +45,7 @@ for (int i = 0; i < 3; i++) {
   }
 }
 
-Serial.println("Best time: " + String(names[user]) + " Time: " + String(usertime));
+//serial.println("Best time: " + String(names[user]) + " Time: " + String(usertime));
 
 
 
@@ -89,15 +89,17 @@ const char* server = "maker.ifttt.com";
 int mod = 0;
 
 //pins:
-const int HX711_doutL = 2;  //mcu > HX711 dout pin
-const int HX711_sckL = 3;   //mcu > HX711 sck pin
+const int HX711_doutL = 12;  //mcu > HX711 dout pin
+const int HX711_sckL = 13;   //mcu > HX711 sck pin
 
 //pins:
 const int HX711_doutR = 10;  //mcu > HX711 dout pin
 const int HX711_sckR = 11;   //mcu > HX711 sck pin
 // HX711 circuit wiring
 
-
+//const int sw = 2
+//const int data= 16
+//const int clk=3
 
 int difRL = 50;
 int minpos = 20;
@@ -105,6 +107,7 @@ int maxpos = 80;
 float forceR = 0;
 float forceL = 0;
 float load = 0;
+int Start= 0;
 
 HX711_ADC LoadCellL(HX711_doutL, HX711_sckL);
 
@@ -112,6 +115,7 @@ HX711_ADC LoadCellR(HX711_doutR, HX711_sckR);
 unsigned long t = 0;
 
 #define BUTTON_RIGHT 14
+#define BUTTON_SW 2
 
 // TTGO: 240x135
 #define TFTW 320          // screen width
@@ -231,8 +235,8 @@ unsigned long guestT, darioT, anitaT;
 unsigned long guestTd, darioTd, anitaTd;
 unsigned long usertime;
 // Rotary Encoder Inputs
-#define CLK 1
-#define DT 2
+#define CLK 3
+#define DT 16
 
 int counter = 0;
 int currentStateCLK;
@@ -244,7 +248,8 @@ int user = 0;
 
 void setup(void) {
 
-  Serial.begin(115200);
+ // Serial.begin(115200);
+ 
 
   // put your setup code here, to run once:
 
@@ -254,16 +259,16 @@ void setup(void) {
   ledcAttachPin(38, 0);
   ledcWrite(0, brightness);
  pinMode(BUTTON_RIGHT, INPUT);
+ pinMode(BUTTON_SW, INPUT_PULLUP);
 
   pinMode(21, INPUT_PULLUP);
 
-  pinMode(0, INPUT_PULLUP);
-  pinMode(1, INPUT_PULLUP);
+  //pinMode(2, INPUT);
+ // pinMode(16, INPUT_PULLUP);
 
-  // Read the initial state of CLK
-  lastStateCLK = digitalRead(0);
 
-  /*
+
+  
 
   LoadCellL.begin();
   LoadCellR.begin();
@@ -277,22 +282,28 @@ void setup(void) {
     if (!loadcellR_rdy) loadcellR_rdy = LoadCellR.startMultiple(stabilizingtime, _tare);
   }
   if (LoadCellL.getTareTimeoutFlag()) {
-    Serial.println("Timeout, check MCU>HX711 no.1 wiring and pin designations");
+    //serial.println("Timeout, check MCU>HX711 no.1 wiring and pin designations");
   }
   if (LoadCellR.getTareTimeoutFlag()) {
-    Serial.println("Timeout, check MCU>HX711 no.2 wiring and pin designations");
+    //serial.println("Timeout, check MCU>HX711 no.2 wiring and pin designations");
   }
-  LoadCellL.setCalFactor(22800);  // user set calibration value (float)
-  LoadCellR.setCalFactor(22800);  // user set calibration value (float)
-  Serial.println("Startup is complete");
+  LoadCellL.setCalFactor(20230);  // user set calibration value (float)
+  LoadCellR.setCalFactor(20230);  // user set calibration value (float)
+  //serial.println("Startup is complete");
 
-*/
+
 
 
   // Call updateEncoder() when any high/low changed seen
   // on interrupt 0 (pin 2), or interrupt 1 (pin 3)
-  attachInterrupt(10, updateEncoder, CHANGE);
-  attachInterrupt(11, updateEncoder, CHANGE);
+  
+  attachInterrupt(CLK, updateEncoder, CHANGE);
+  attachInterrupt(DT, updateEncoder, CHANGE);
+
+    // Read the initial state of CLK
+  lastStateCLK = digitalRead(CLK);
+
+
   tft.begin();
   tft.setRotation(3);
    tft.setSwapBytes(true);
@@ -354,12 +365,12 @@ void setup(void) {
 
 
   if (!res) {
-    Serial.println("Failed to connect");
+    //serial.println("Failed to connect");
 
     // ESP.restart();
   } else {
     //if you get here you have connected to the WiFi
-    Serial.println("connected...yeey :)");
+    //serial.println("connected...yeey :)");
   }
 
   tft.fillScreen(TFT_BLACK);
@@ -378,11 +389,20 @@ Serial.print("lost Connection");
   }
   */
 
-if (digitalRead(21)== LOW){
+  //Serial.println(mod);
+updateLoadcell(); 
+
+
+if (digitalRead(BUTTON_SW)== LOW){
   mod= 1;
+  delay(500);
 }
 
 if (mod == 1){
+if (digitalRead(BUTTON_SW)== LOW){
+  mod= 0;
+}
+
  game_start();
   game_loop();
   game_over();
@@ -390,14 +410,14 @@ if (mod == 1){
 else{
   updateEncoder();
 
-  if (digitalRead(21) == LOW) {
+  if (digitalRead(Start) == HIGH) {
     unsigned long currentMillis = millis();
     previusMillis2 = (currentMillis - previousMillis);  ///
 
     finished = previusMillis2;
   }
 
-  if (digitalRead(21) == HIGH) {
+  if (digitalRead(Start) == LOW) {
 
     previousMillis = millis();
     if (previusMillis3 != previusMillis2) {
@@ -448,6 +468,10 @@ void drawPicture() {
   tft.setTextSize(3);
   tft.setCursor(0, 0);
   tft.println("Hangboardtimer");
+tft.setCursor(180, 90);
+  tft.print(load,1);
+  tft.println("kg ");
+  
 
 
   /// update alle the collected times
@@ -526,7 +550,7 @@ void drawPicture() {
 
 void updateEncoder() {
   // Read the current state of CLK
-  currentStateCLK = digitalRead(11);
+  currentStateCLK = digitalRead(CLK);
 
   // If last and current state of CLK are different, then pulse occurred
   // React to only 1 state change to avoid double count
@@ -534,7 +558,7 @@ void updateEncoder() {
 
     // If the DT state is different than the CLK state then
     // the encoder is rotating CCW so decrement
-    if (digitalRead(10) != currentStateCLK) {
+    if (digitalRead(CLK) != currentStateCLK) {
 
 
       counter--;
@@ -602,21 +626,21 @@ void userSelect() {
 
 // Make an HTTP request to the IFTTT web service
 void makeIFTTTRequest() {
-  Serial.print("Connecting to ");
-  Serial.print(server);
+  //serial.print("Connecting to ");
+  //serial.print(server);
 
   WiFiClient client;
   int retries = 5;
   while (!!!client.connect(server, 80) && (retries-- > 0)) {
-    Serial.print(".");
+    //serial.print(".");
   }
-  Serial.println();
+  //serial.println();
   if (!!!client.connected()) {
-    Serial.println("Failed to connect...");
+    //serial.println("Failed to connect...");
   }
 
-  Serial.print("Request resource: ");
-  Serial.println(resource);
+  //serial.print("Request resource: ");
+  //serial.println(resource);
 
   // Webhook Vairables
   String jsonObject = String("{\"value1\":\"") + (guestT) + "\",\"value2\":\"" + (anitaT)
@@ -635,13 +659,13 @@ void makeIFTTTRequest() {
     delay(100);
   }
   if (!!!client.available()) {
-    Serial.println("No response...");
+    //serial.println("No response...");
   }
   while (client.available()) {
     Serial.write(client.read());
   }
 
-  Serial.println("\nclosing connection");
+  //serial.println("\nclosing connection");
   client.stop();
 }
 
@@ -650,7 +674,7 @@ void daycheck() {
 
   if (timeClient.getDay() != dayofmonth) {
     dayofmonth = timeClient.getDay();
-    Serial.println("day has changed");
+    //serial.println("day has changed");
 
     guestTd = 0;
     anitaTd = 0;
@@ -695,6 +719,7 @@ void game_init() {
 }
 
 void game_start() {
+  
   tft.fillScreen(TFT_BLACK);
   tft.fillRect(10, TFTH2 - 20, TFTW - 20, 1, TFT_WHITE);
   tft.fillRect(10, TFTH2 + 32, TFTW - 20, 1, TFT_WHITE);
@@ -719,9 +744,15 @@ tft.setTextSize(3);
   tft.println("WEIGHTSHIFT or DIE");
 
   // wait for push button
-  while (digitalRead(BUTTON_RIGHT) == HIGH)
+
+  
+  while (digitalRead(BUTTON_SW) == HIGH)
+ // while (digitalRead(BUTTON_RIGHT) == HIGH)
   updateLoadcell();
-    yield();
+  if (digitalRead(BUTTON_SW)== LOW){
+  mod= 0;
+}
+    //yield();
 
   // init game settings
   game_init();
@@ -729,7 +760,10 @@ tft.setTextSize(3);
 
 void game_loop() {
 
-  
+ 
+if (digitalRead(BUTTON_SW)== LOW){
+  mod= 0;
+}
   // ===============
   // prepare game variables
   // draw floor
@@ -757,15 +791,19 @@ void game_loop() {
   unsigned char px;
 
   while (true) {
-    yield();
+    //yield();
 
     int loops = 0;
     while (millis() > next_game_tick && loops < MAX_FRAMESKIP) {
       // ===============
       // input
       // ===============
-     
+     if (digitalRead(BUTTON_SW)== LOW){
+  mod= 0;
+}
   updateLoadcell();
+  
+
 
       if (digitalRead(BUTTON_RIGHT) == LOW) {
         // if the bird is not too close to the top of the screen apply jump force
@@ -938,10 +976,18 @@ void game_over() {
   tft.setCursor(10, 28);
   tft.print("Max Score:");
   tft.print(maxScore);
+  if (digitalRead(BUTTON_SW)== LOW){
+  mod= 0;
+}
 
   // wait for push button
-  while (digitalRead(BUTTON_RIGHT) == HIGH)
-    yield();
+  while (digitalRead(BUTTON_SW) == HIGH)
+ // while (digitalRead(BUTTON_RIGHT) == HIGH)
+
+    //yield();
+    if (digitalRead(BUTTON_SW)== LOW){
+  mod= 0;
+}
 }
 
 
@@ -960,21 +1006,27 @@ void updateLoadcell() {
     if (millis() > t + serialPrintInterval) {
       float a = LoadCellL.getData();
       float b = LoadCellR.getData();
-      //  Serial.print("Load_cell 1 output val: ");
-      //  Serial.print(a);
-      //  Serial.print("    Load_cell 2 output val: ");
-      //  Serial.println(b);
+      //  //serial.print("Load_cell 1 output val: ");
+      //  //serial.print(a);
+      //  //serial.print("    Load_cell 2 output val: ");
+      //  //serial.println(b);
       newDataReady = 0;
       t = millis();
 
-      forceL = a * -1;
-      forceR = b * -1;
+      forceL = a ;
+      forceR = b ;
       load = forceL + forceR;
-      difRL = (map(forceR, 0, load, minpos, maxpos));
+      difRL = (map(forceL, 0, load, minpos, maxpos));
       bird.y = difRL;
 
-      //Serial.print(" Diff val: ");
-      //Serial.println(difRL);
+      if (load <= 40){
+        Start= 1;
+      }
+else{
+  Start=0;
+}
+      ////serial.print(" Diff val: ");
+      ////serial.println(difRL);
     }
   }
 /*
@@ -989,10 +1041,10 @@ void updateLoadcell() {
 
   //check if last tare operation is complete
   if (LoadCellL.getTareStatus() == true) {
-    Serial.println("Tare load cell 1 complete");
+    //serial.println("Tare load cell 1 complete");
   }
   if (LoadCellR.getTareStatus() == true) {
-    Serial.println("Tare load cell 2 complete");
+    //serial.println("Tare load cell 2 complete");
   }
   */
 }
