@@ -603,16 +603,16 @@ void userSelect() {
   //user = counter;
 
 
-  if ((load >=65) && (<= 75)){
+  if ((loadmax >=65) && (<= 75)){
 user= 1;
   }
 
-if ((load >=76) && (<= 90))
+if ((loadmax >=76) && (<= 90))
 {
 user= 2;
 }
 
-  //if ((load >=1400) && (<= 1700))
+  //if ((loadmax >=1400) && (<= 1700))
   switch (user) {
     case 0:
       tft.setCursor(60, 105);
