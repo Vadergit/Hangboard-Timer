@@ -366,6 +366,7 @@ void setup(void) {
     //if you get here you have connected to the WiFi
     //serial.println("connected...yeey :)");
   }
+  makeIFTTTRequest();
 
   tft.fillScreen(TFT_BLACK);
 }
@@ -402,8 +403,7 @@ void loop() {
     */
 
 void hang() {
-  if (mod == 0) {
-    //updateEncoder();
+ 
 
     if (digitalRead(Start) == HIGH) {
       unsigned long currentMillis = millis();
@@ -457,7 +457,7 @@ void hang() {
     tft.println("user:");
     userSelect();
   }
-}
+
 
 void drawPicture() {
 
@@ -521,28 +521,15 @@ void drawPicture() {
 
 
   tft.drawBitmap(TFTWITH - 70, 0, boulderimages, 70, 54, TFT_WHITE);
-
-
-
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_Palm, 36, 48, TFT_WHITE);
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_Palml, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_Mittel, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_Ring, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_zeige, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - 36, TFTHEIGHT - 48, epd_bitmap_klein, 36, 48, TFT_WHITE);
-
-
-
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_Mittell, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_Ringl, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_zeigel, 36, 48, TFT_WHITE);
-
   tft.drawBitmap(TFTWITH - (2 * 36) - 4, TFTHEIGHT - 48, epd_bitmap_kleinl, 36, 48, TFT_WHITE);
 }
 
@@ -553,10 +540,13 @@ void userSelect() {
 
   if ((maxload >= 65) && (maxload <= 75)) {
     user = 1;
+ 
   }
 
   if ((maxload >= 76) && (maxload <= 90)) {
+ 
     user = 2;
+  
   }
 
 
@@ -604,9 +594,9 @@ void makeIFTTTRequest() {
   //serial.print("Request resource: ");
   //serial.println(resource);
 
-  // Webhook Vairables
-  String jsonObject = String("{\"value1\":\"") + ("0") + "\",\"value2\":\"" + ("0")
-                      + "\",\"value3\":\"" + ("0") + "\"}";
+  // Webhook Vairable
+    String jsonObject = String("{\"value1\":\"") + (guestT) + "\",\"value2\":\"" + (anitaT)
+                      + "\",\"value3\":\"" + (darioT) + "\"}";
 
   client.println(String("POST ") + resource + " HTTP/1.1");
   client.println(String("Host: ") + server);
@@ -632,46 +622,11 @@ void makeIFTTTRequest() {
 
   //////////////////////////////////////////////////////////////////////////////////////retrys///////////////////////////
 
-
-  /*
-  while (!!!client.connect(server, 80) && (retries-- > 0)) {
-    //serial.print(".");
-  }
-  //serial.println();
-  if (!!!client.connected()) {
-    //serial.println("Failed to connect...");
-  }
-
-  //serial.print("Request resource: ");
-  //serial.println(resource);
-
-  // Webhook Vairables
-  String jsonObject = String("{\"value1\":\"") + (guestT) + "\",\"value2\":\"" + (anitaT)
-                      + "\",\"value3\":\"" + (darioT) + "\"}";
-
-  client.println(String("POST ") + resource + " HTTP/1.1");
-  client.println(String("Host: ") + server);
-  client.println("Connection: close\r\nContent-Type: application/json");
-  client.print("Content-Length: ");
-  client.println(jsonObject.length());
-  client.println();
-  client.println(jsonObject);
-
-  int timeout = 5 * 10;  // 5 seconds
-  while (!!!client.available() && (timeout-- > 0)) {
-    delay(100);
-  }
-  if (!!!client.available()) {
-    //serial.println("No response...");
-  }
-  while (client.available()) {
-    Serial.write(client.read());
-  }
-
-  //serial.println("\nclosing connection");
-  client.stop();
+ darioT=0;
+  guestT=0;
+anitaT=0;
 }
-
+/*
 void daycheck() {
   timeClient.update();
 
@@ -683,9 +638,9 @@ void daycheck() {
     anitaTd = 0;
     darioTd = 0;
   }
-  */
+  
 }
-
+*/
 
 
 
@@ -1004,7 +959,9 @@ void updateLoadcell() {
       load = forceL + forceR;
       difRL = (map(forceR, 0, load, maxpos, minpos));
       difRLConstrain = constrain(difRL, 0, 124);
-
+      if (load < 0) {  // determine minimum value
+        load=0;
+      }
       bird.y = difRLConstrain;
       if (load > maxload) {  // determine minimum value
         maxload = load;
