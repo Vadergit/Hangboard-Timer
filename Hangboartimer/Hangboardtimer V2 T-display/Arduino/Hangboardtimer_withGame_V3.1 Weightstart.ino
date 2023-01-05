@@ -102,11 +102,12 @@ const int HX711_sckR = 11;   //mcu > HX711 sck pin
 //const int clk=3
 
 int difRL = 50;
-int minpos = 20;
-int maxpos = 80;
+int minpos = -20;
+int maxpos = 160;
 float forceR = 0;
 float forceL = 0;
 float load = 0;
+int difRLConstrain;
 
 float maxload =0;
 int Start= 0;
@@ -1075,7 +1076,9 @@ void updateLoadcell() {
       forceR = b ;
       load = forceL + forceR;
       difRL = (map(forceL, 0, load, minpos, maxpos));
-      bird.y = difRL;
+      difRLConstrain = constrain(difRL, 0, 100); 
+      
+      bird.y = difRLConstrain;
 
       if (load <= 40){
         Start= 1;
