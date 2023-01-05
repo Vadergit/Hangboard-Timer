@@ -107,6 +107,8 @@ int maxpos = 80;
 float forceR = 0;
 float forceL = 0;
 float load = 0;
+
+float maxload =0;
 int Start= 0;
 
 HX711_ADC LoadCellL(HX711_doutL, HX711_sckL);
@@ -597,7 +599,19 @@ void updateEncoder() {
 
 
 void userSelect() {
-  user = counter;
+  //user = counter;
+
+
+  if ((load >=65) && (<= 75)){
+user= 1;
+  }
+
+if ((load >=76) && (<= 90))
+{
+user= 2;
+}
+
+  //if ((load >=1400) && (<= 1700))
   switch (user) {
     case 0:
       tft.setCursor(60, 105);
@@ -630,6 +644,48 @@ void makeIFTTTRequest() {
   //serial.print(server);
 
   WiFiClient client;
+  int retries = 5;
+  while (!!!client.connect(server, 80) && (retries-- > 0)) {
+    //serial.print(".");
+  }
+  //serial.println();
+  if (!!!client.connected()) {
+    //serial.println("Failed to connect...");
+  }
+
+  //serial.print("Request resource: ");
+  //serial.println(resource);
+
+  // Webhook Vairables
+  String jsonObject = String("{\"value1\":\"") + ("0") + "\",\"value2\":\"" + ("0")
+                      + "\",\"value3\":\"" + ("0") + "\"}";
+
+  client.println(String("POST ") + resource + " HTTP/1.1");
+  client.println(String("Host: ") + server);
+  client.println("Connection: close\r\nContent-Type: application/json");
+  client.print("Content-Length: ");
+  client.println(jsonObject.length());
+  client.println();
+  client.println(jsonObject);
+
+  int timeout = 5 * 10;  // 5 seconds
+  while (!!!client.available() && (timeout-- > 0)) {
+    delay(100);
+  }
+  if (!!!client.available()) {
+    //serial.println("No response...");
+  }
+  while (client.available()) {
+    Serial.write(client.read());
+  }
+
+  //serial.println("\nclosing connection");
+  client.stop();
+
+  //////////////////////////////////////////////////////////////////////////////////////retrys///////////////////////////
+
+
+    WiFiClient client;
   int retries = 5;
   while (!!!client.connect(server, 80) && (retries-- > 0)) {
     //serial.print(".");
@@ -746,6 +802,8 @@ tft.setTextSize(3);
   // wait for push button
 
   
+
+
   while (digitalRead(BUTTON_SW) == HIGH)
  // while (digitalRead(BUTTON_RIGHT) == HIGH)
   updateLoadcell();
@@ -1021,9 +1079,14 @@ void updateLoadcell() {
 
       if (load <= 40){
         Start= 1;
+      maxload = max(load);
+
+
+
       }
 else{
   Start=0;
+  maxload= 0;
 }
       ////serial.print(" Diff val: ");
       ////serial.println(difRL);
